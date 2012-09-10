@@ -23,7 +23,7 @@ echo "Content-Type: text/plain"
 echo
 
 # Check if we can execute mybackup.sh
-if [ ! -e "$MYBACKUP" ]; then
+if [ ! -x "$MYBACKUP" ]; then
     exit 1
 fi
 
