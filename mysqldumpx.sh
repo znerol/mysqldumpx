@@ -109,7 +109,6 @@ checkconfig() {
 # inheritance of variables.
 runconfig() {(
     # Clear config variables which may not be inherited
-    unset CONFDIR
     unset EXPAND
     unset DUMPFILE_ADD
     unset MYSQLDUMP_OPTS_ADD
@@ -152,11 +151,8 @@ runconfig() {(
         MYSQLDUMP_OPTS="$MYSQLDUMP_OPTS $MYSQLDUMP_OPTS_ADD"
     fi
 
-    # Setup CONFDIR, defaults to dirname of current config file
-    CONFDIR="${CONFDIR:-$(cd "$(dirname "$1")" && pwd)}"
-
-    # Change directory to configuration dir
-    cd "$CONFDIR"
+    # Change directory to the home of the current config file
+    cd "$(dirname "$1")"
 
     if [ -n "$EXPAND" ]; then
         # Run the confset if this is not a simple config (recurse)
