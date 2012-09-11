@@ -164,7 +164,7 @@ runconfig() {(
         # Take a backup using the current configuration
         if [ -z "DATABASE" ]; then
             warn "  Failed to run config $NAME. No database specified"
-            return 1
+            return
         fi
 
         # Construct tableset
