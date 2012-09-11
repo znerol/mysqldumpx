@@ -171,17 +171,25 @@ runconfig() {(
             return 1
         fi
 
-        dumpfile="$DUMPDIR/$DUMPFILE-$DATESTAMP.sql.gz"
-        log "  Dumping to file '$dumpfile'"
-        trap "rm -f -- '$dumpfile'" ERR
+        # Construct tableset
+        tables=''
         if [ -n "$TABLESET" ]; then
             tables=$(mysqlfiltertables $MYSQL_OPTS "$DATABASE" < "$TABLESET")
-            mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" $tables | gzip > "$dumpfile"
-        else
-            mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" | gzip > "$dumpfile"
+            if [ -z "$tables" ]; then
+                warn "  No tables in database '$DATABASE' match the rules given in tableset '$TABLESET'. Skipping."
+                return
+            fi
         fi
+
+        # Write dumpfile
+        dumpfile="$DUMPDIR/$DUMPFILE-$DATESTAMP.sql.gz"
+        log "  Dumping to file '$dumpfile'"
+
+        trap "rm -f -- '$dumpfile'" ERR
+        mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" $tables | gzip > "$dumpfile"
         trap - ERR
 
+        # Rotate
         if [ "$KEEP" -gt "0" ]; then
             log "  Purging old dumps"
             purge "$DUMPDIR/$DUMPFILE-" ".sql.gz" $KEEP
