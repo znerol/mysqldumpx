@@ -2,6 +2,7 @@
 
 # Exit if some command returns with a non-zero status
 set -e
+set -o pipefail
 
 # Fix path
 export PATH=/bin:/usr/bin
@@ -135,12 +136,14 @@ runconfig() {
 
         dumpfile="$DUMPDIR/$DUMPFILE-$DATESTAMP.sql.gz"
         log "  Dumping to file '$dumpfile'"
+        trap "rm -f -- '$dumpfile'" ERR
         if [ -n "$TABLESET" ]; then
             tables=$("$MYSQLFILTERTABLES" $MYSQL_OPTS "$DATABASE" < "$TABLESET")
             mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" $tables | gzip > "$dumpfile"
         else
             mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" | gzip > "$dumpfile"
         fi
+        trap - ERR
 
         if [ "$KEEP" -gt "0" ]; then
             log "  Purging old dumps"

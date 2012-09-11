@@ -12,6 +12,7 @@
 
 # Terminate on error
 set -e
+set -o pipefail
 
 # Fix path
 export PATH=/bin:/usr/bin
