@@ -7,13 +7,6 @@ set -o pipefail
 # Fix path
 export PATH=/bin:/usr/bin
 
-# Determine full path to script
-# http://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
-if [ -z "$MYSQLFILTERTABLES" ]; then
-    HOMEDIR=$(cd "$(dirname "$0")" && pwd)
-    MYSQLFILTERTABLES=$HOMEDIR/mysqlfiltertables.sh
-fi
-
 # List of required commands
 REQUIRED_COMMANDS="
     basename
@@ -55,6 +48,49 @@ err() {
     logger -s -p user.err -- "ERROR: $@"
 }
 
+# Generate a list of tables in the specified MySQL database matching the given
+# include and exclude patterns. The list of patterns is read from standard
+# input, one pattern per line. Each line has the form:
+#   include|exclude PATTERN
+#
+# Where PATTERN represents a MySQL LIKE pattern. Empty lines are ignored as
+# well as lines starting with the comment character "#".
+#
+# Usage: mysqlfiltertables.sh [mysql options] database
+mysqlfiltertables() {(
+    # Create temporary files
+    INCLUDE_SQL=$(mktemp)
+    EXCLUDE_SQL=$(mktemp)
+    INCLUDE_TABLE=$(mktemp)
+    EXCLUDE_TABLE=$(mktemp)
+    trap "rm -f -- '$INCLUDE_TABLE' '$EXCLUDE_TABLE' '$INCLUDE_SQL' '$EXCLUDE_SQL'" EXIT
+
+    # Read inclusion and exclusion patterns from stdin and construct SQL.
+    sed -e "s/#.*//" -e "/^[[:space:]]*$/d" | while read action pattern; do
+        case $action in
+            include)
+                echo "SHOW TABLES LIKE '$pattern';" >> "$INCLUDE_SQL"
+                ;;
+            exclude)
+                echo "SHOW TABLES LIKE '$pattern';" >> "$EXCLUDE_SQL"
+                ;;
+        esac
+    done
+
+    # If no inclusion patterns were specified, start with all tables.
+    if [ ! -s "$INCLUDE_SQL" ]; then
+        echo "SHOW TABLES;" > "$INCLUDE_SQL"
+    fi
+
+    # Construct inclusion and exclusion table list by running the SQL.
+    mysql "$@" --skip-column-names < "$INCLUDE_SQL" | sort > $INCLUDE_TABLE;
+    mysql "$@" --skip-column-names < "$EXCLUDE_SQL" | sort > $EXCLUDE_TABLE;
+
+    # Compare table sets and only report those entries which are in the inclusion
+    # set but not in the exclusion set.
+    comm -23 $INCLUDE_TABLE $EXCLUDE_TABLE;
+)}
+
 # Check if a config file can be sourced without side effects
 checkconfig() {
     # Test if this file is accessible
@@ -68,9 +104,10 @@ checkconfig() {
     fi
 }
 
-# Read a configuration file and run the commands. This function must be
-# executed in a subshell.
-runconfig() {
+# Read a configuration file and run the commands. The function body is executed
+# in a subshell in order to allow for changing directory, trapping and
+# inheritance of variables.
+runconfig() {(
     # Clear config variables which may not be inherited
     unset CONFDIR
     unset EXPAND
@@ -138,7 +175,7 @@ runconfig() {
         log "  Dumping to file '$dumpfile'"
         trap "rm -f -- '$dumpfile'" ERR
         if [ -n "$TABLESET" ]; then
-            tables=$("$MYSQLFILTERTABLES" $MYSQL_OPTS "$DATABASE" < "$TABLESET")
+            tables=$(mysqlfiltertables $MYSQL_OPTS "$DATABASE" < "$TABLESET")
             mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" $tables | gzip > "$dumpfile"
         else
             mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" | gzip > "$dumpfile"
@@ -151,14 +188,13 @@ runconfig() {
         fi
         log "  Finish running config $NAME"
     fi
-}
+)}
 
 # Check and run the given configuration files
 runconfigfiles() {
     for configfile in "$@"; do
         if checkconfig "$configfile"; then
-            # Run in a subshell
-            (runconfig "$configfile")
+            runconfig "$configfile"
         else
             warn "Skipping invalid configfile '$configfile'"
         fi
@@ -178,12 +214,6 @@ purge() {
     fi
 }
 
-
-# Check for mysqlfiltertables helper script
-if ! which "$MYSQLFILTERTABLES" > /dev/null; then
-    err "Required script mysqlfiltertables.sh not found"
-    exit 1
-fi
 
 # Check for required binaries
 if ! which $REQUIRED_COMMANDS > /dev/null; then
