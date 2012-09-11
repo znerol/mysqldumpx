@@ -219,6 +219,16 @@ purge() {
 }
 
 
+while getopts cd opts; do
+    case $opts in
+        d) DEBUG='yes';;
+        c) CHECKONLY='yes';;
+        ?) exit 1;;
+    esac
+done
+
+shift $(($OPTIND-1))
+
 # Check for required binaries
 if ! which $REQUIRED_COMMANDS > /dev/null; then
     err "One or more of the required shell commands does is not available in your system"
@@ -226,14 +236,9 @@ if ! which $REQUIRED_COMMANDS > /dev/null; then
     exit 1
 fi
 
-while getopts d opts; do
-    case $opts in
-        d) DEBUG='yes';;
-        ?) exit 1;;
-    esac
-done
-
-shift $(($OPTIND-1))
+if [ "$CHECKONLY" = "yes" ]; then
+    exit
+fi
 
 if [ "$#" -gt 0 ]; then
     # Run configfiles given on the command line if any
