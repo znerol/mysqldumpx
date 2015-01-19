@@ -34,18 +34,18 @@ DATESTAMP=$(date +"%Y-%m-%dT%H-%M-%S")
 # Log message to stderr as well as syslog
 log() {
     if [ -n "$DEBUG" ]; then
-        logger -s -p user.notice -- "NOTE: $@"
+        logger -s -p user.notice -- "$0 NOTE: $@"
     fi
 }
 
 # Log warning to stderr as well as syslog
 warn() {
-    logger -s -p user.info -- "WARNING: $@"
+    logger -s -p user.info -- "$0 WARNING: $@"
 }
 
 # Log error to stderr as well as syslog
 err() {
-    logger -s -p user.err -- "ERROR: $@"
+    logger -s -p user.err -- "$0 ERROR: $@"
 }
 
 # Generate a list of tables in the specified MySQL database matching the given
