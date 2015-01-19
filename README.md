@@ -28,3 +28,8 @@ mysql. A commented configuration file with examples of all available options is
 available in the examples. Additional there are working configurations for
 Drupal and Piwik available which you may use as a starting point for your
 versions.
+
+OPTIONS
+-------
+-d Debug mode : Log *notice* message to stderr as well as syslog
+-c Checkonly mode : Check only required commands
