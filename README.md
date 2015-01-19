@@ -31,6 +31,6 @@ versions.
 
 OPTIONS
 -------
-
 -d Debug mode : Log *notice* message to stderr as well as syslog
+
 -c Checkonly mode : Check only required commands
