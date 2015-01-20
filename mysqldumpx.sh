@@ -34,18 +34,18 @@ DATESTAMP=$(date +"%Y-%m-%dT%H-%M-%S")
 # Log message to stderr as well as syslog
 log() {
     if [ -n "$DEBUG" ]; then
-        logger -s -p user.notice -- "NOTE: $@"
+        logger -s -p user.notice -- "$0 NOTE: $@"
     fi
 }
 
 # Log warning to stderr as well as syslog
 warn() {
-    logger -s -p user.info -- "WARNING: $@"
+    logger -s -p user.info -- "$0 WARNING: $@"
 }
 
 # Log error to stderr as well as syslog
 err() {
-    logger -s -p user.err -- "ERROR: $@"
+    logger -s -p user.err -- "$0 ERROR: $@"
 }
 
 # Generate a list of tables in the specified MySQL database matching the given
@@ -143,6 +143,13 @@ runconfig() {(
         DUMPFILE="$DUMPFILE_ADD"
     fi
 
+    # Check for disabling compression
+    if [ "$COMPRESSION" = "no" ]; then
+        extention="sql"
+    else
+        extention="sql.gz"
+    fi
+
     # Append additional mysql options if any
     if [ -n "$MYSQL_OPTS_ADD" ]; then
         MYSQL_OPTS="$MYSQL_OPTS $MYSQL_OPTS_ADD"
@@ -178,17 +185,21 @@ runconfig() {(
         fi
 
         # Write dumpfile
-        dumpfile="$DUMPDIR/$DUMPFILE-$DATESTAMP.sql.gz"
+        dumpfile="$DUMPDIR/$DUMPFILE-$DATESTAMP.$extention"
         log "  Dumping to file '$dumpfile'"
 
         trap "rm -f -- '$dumpfile'" ERR
-        mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" $tables | gzip > "$dumpfile"
+        if [ "$COMPRESSION" = "no" ]; then
+            mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" $tables > "$dumpfile"
+        else
+            mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" $tables | gzip > "$dumpfile"
+        fi
         trap - ERR
 
         # Rotate
         if [ "$KEEP" -gt "0" ]; then
             log "  Purging old dumps"
-            purge "$DUMPDIR/$DUMPFILE-" ".sql.gz" $KEEP
+            purge "$DUMPDIR/$DUMPFILE-" "$extention" $KEEP
         fi
         log "  Finish running config $NAME"
     fi
