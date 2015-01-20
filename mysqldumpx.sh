@@ -143,6 +143,13 @@ runconfig() {(
         DUMPFILE="$DUMPFILE_ADD"
     fi
 
+    # Check for disabling compression
+    if [ "$COMPRESSION" = "no" ]; then
+        extension="sql"
+    else
+        extension="sql.gz"
+    fi
+
     # Append additional mysql options if any
     if [ -n "$MYSQL_OPTS_ADD" ]; then
         MYSQL_OPTS="$MYSQL_OPTS $MYSQL_OPTS_ADD"
@@ -178,17 +185,21 @@ runconfig() {(
         fi
 
         # Write dumpfile
-        dumpfile="$DUMPDIR/$DUMPFILE-$DATESTAMP.sql.gz"
+        dumpfile="$DUMPDIR/$DUMPFILE-$DATESTAMP.$extension"
         log "  Dumping to file '$dumpfile'"
 
         trap "rm -f -- '$dumpfile'" ERR
-        mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" $tables | gzip > "$dumpfile"
+        if [ "$COMPRESSION" = "no" ]; then
+            mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" $tables > "$dumpfile"
+        else
+            mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" $tables | gzip > "$dumpfile"
+        fi
         trap - ERR
 
         # Rotate
         if [ "$KEEP" -gt "0" ]; then
             log "  Purging old dumps"
-            purge "$DUMPDIR/$DUMPFILE-" ".sql.gz" $KEEP
+            purge "$DUMPDIR/$DUMPFILE-" "$extension" $KEEP
         fi
         log "  Finish running config $NAME"
     fi
