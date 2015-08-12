@@ -201,6 +201,12 @@ runconfig() {(
         fi
         trap - ERR
 
+        # Setting permissions
+        if [ "$CHMOD" != "no" ]; then
+            chmod $CHMOD "$dumpfile"
+        fi
+        trap - ERR
+
         # Rotate
         if [ "$KEEP" -gt "0" ]; then
             log "  Purging old dumps"
