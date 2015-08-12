@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Exit if some command returns with a non-zero status
+# Exit if some command returns with a non-zero status/HEAD
 set -e
 set -o pipefail
 
@@ -143,7 +143,7 @@ runconfig() {(
         DUMPFILE="$DUMPFILE_ADD"
     fi
 
-    # Check for disabling compression
+    # Check whether or not compression is enabled
     if [ "$COMPRESSION" = "no" ]; then
         extension="sql"
     else
