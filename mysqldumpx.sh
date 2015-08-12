@@ -194,6 +194,11 @@ runconfig() {(
         else
             mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" $tables | gzip > "$dumpfile"
         fi
+
+        # Setting permissions
+        if [ "$CHMOD" != "no" ]; then
+            chmod $CHMOD "$dumpfile"
+        fi
         trap - ERR
 
         # Rotate
