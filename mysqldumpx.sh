@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Exit if some command returns with a non-zero status/HEAD
+# Exit if some command returns with a non-zero status
 set -e
 set -o pipefail
 
@@ -193,6 +193,12 @@ runconfig() {(
             mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" $tables > "$dumpfile"
         else
             mysqldump $MYSQL_OPTS $MYSQLDUMP_OPTS "$DATABASE" $tables | gzip > "$dumpfile"
+        fi
+        trap - ERR
+
+        # Setting permissions
+        if [ "$CHMOD" != "no" ]; then
+            chmod $CHMOD "$dumpfile"
         fi
         trap - ERR
 
